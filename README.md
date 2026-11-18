@@ -1,35 +1,37 @@
 # Moving Ownership in Rust
 
-> ✏️ **Write these sections yourself.** Everything marked ✏️ is a prompt for you to answer
-> in your own words. Delete the prompts when you're done. The "How to run" and
-> "Repository layout" sections are already filled in.
-
 ## Introduction
 
-✏️ *In 2–4 sentences: what is ownership in Rust, and what does "moving" ownership mean?
-Why did you pick this topic?*
+Ownership is Rust's system for managing memory safely without needing a garbage collector. Every value has an owner, and when ownership is moved from one variable to another, the original variable can no longer access that value. I chose this topic because I wanted to better understand how Rust manages memory behind the scenes and how its approach prevents common memory-related bugs that can occur in languages like C. 
 
 ## What I explored
 
-✏️ *Briefly list the questions you set out to answer. For example:*
-- *What actually happens in memory when I write `let s2 = s1;`?*
-- *Why can't I use `s1` afterward?*
-- *How does this compare to copying a pointer in C?*
-- *When does Rust copy instead of move?*
+I set out to answer several questions about how ownership works in practice:
+- What actually happens in memory when I write let s2 = s1;? Does Rust copy the underlying data or transfer ownership?
+- Why can I no longer use s1 after moving its value into s2?
+- How does moving ownership in Rust compare to copying a pointer in C?
+- How does Rust determine whether a value should be copied or moved?
+- What happens when a value is moved multiple times, particularly when it comes to freeing memory?
+- Why does Rust prevent certain operations, such as moving a value directly out of a vector?
+- Can C programs with similar memory-management problems compile successfully, and what errors can AddressSanitizer detect at runtime?
 
 ## Most interesting discoveries
 
-✏️ *Pick 3–5 things that surprised you or clicked for you while running the experiments.
-For each, say what you expected, what actually happened, and why. Some places to look:*
-- *Experiment 3 prints heap addresses. What do they show about whether a move copies data?*
-- *Experiment 5 shows when `drop` runs. How many times does a moved value get dropped?*
-- *Experiment 7: why does Rust refuse `let s = v[0];`, and what would go wrong if it allowed it?*
-- *The C programs compile with no errors. What does AddressSanitizer report when you run them?*
+1. Before running the experiments, I assumed that assigning a variable to another variable might create a completely new copy of the underlying data. However, Experiment 3 showed that when moving a String, its heap allocation stays at the same memory address. Instead of duplicating the heap data, Rust transfers ownership of the existing allocation to the new variable. This means moving can be very efficient because it avoids unnecessary memory copying.
+
+2. Initially, I thought that once a variable was moved, its value might be deleted or become inaccessible altogether. Instead, the value remains alive and is accessible through its new owner. Rust prevents access through the original variable to ensure that there is always a clear owner responsible for the memory. This helped me understand that moving is about transferring responsibility, not destroying data.
+
+3. Experiment 5 helped me understand how Rust prevents double-free errors. I initially wondered whether both the original and new variables would eventually try to free the same memory. However, Rust ensures that only the variable that currently owns the value is responsible for dropping it. Even if ownership moves multiple times, the value is dropped exactly once when its final owner goes out of scope. This is important because attempting to free the same memory twice can cause serious memory errors.
+
+4. Experiment 7 demonstrated that Rust rejects let s = v[0]; when the vector contains String values. I initially expected this to work similarly to accessing an element in an array. However, allowing this operation would move the string out of the vector and leave an invalid or partially empty element behind. Since the vector still needs to maintain ownership of its elements, Rust prevents this. Instead, I would need to borrow the element or explicitly remove it using an appropriate method.
+
+5. One of the biggest differences I noticed was that the C programs could compile even when they contained unsafe memory operations, such as using a pointer after freeing its memory. However, running them with AddressSanitizer exposed issues like use-after-free and double-free errors. In contrast, Rust's ownership system catches many of these problems before the program even runs. This showed me how Rust shifts much of memory safety from runtime debugging to compile-time enforcement.
 
 ## Rust vs. C
 
-✏️ *A short comparison in your own words (a table works well): who frees memory, what
-happens when you copy a pointer or move a value, and when bugs get caught.*
+The biggest difference between Rust and C is how each language handles memory ownership and prevents memory-related bugs. Rust enforces strict ownership rules at compile time, while C gives programmers much more manual control over memory management.
+
+Overall, exploring moving ownership helped me understand that Rust's ownership system is more than just a way to manage memory. It establishes clear rules about who is responsible for data at any given time. While C provides greater flexibility by allowing programmers to manage pointers directly, Rust uses compile-time restrictions to prevent entire categories of memory-safety bugs. The experiments helped me see why these restrictions exist and how they make Rust both efficient and safer.
 
 ## How to run
 
@@ -81,7 +83,7 @@ Both programs compile without any errors. The bugs only show up when they run.
 
 ## Presentation
 
-✏️ *Link your slides here, e.g. [Slides (PDF)](slides/moving-ownership.pdf)*
+
 
 ## Resources
 
@@ -92,6 +94,3 @@ Both programs compile without any errors. The bugs only show up when they run.
 - [`Copy` trait documentation](https://doc.rust-lang.org/std/marker/trait.Copy.html)
 - [`Drop` trait documentation](https://doc.rust-lang.org/std/ops/trait.Drop.html)
 - [AddressSanitizer (Clang docs)](https://clang.llvm.org/docs/AddressSanitizer.html)
-
-✏️ *Add anything else you actually used: videos, blog posts, class notes, and a note on how
-you used AI to help you understand the topic if your course asks for that.*
